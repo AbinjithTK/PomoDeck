@@ -1,0 +1,47 @@
+displayName: PomoDeck
+description: Haptic events from the PomoDeck focus timer
+
+events:
+  - name: timer_complete
+    displayName: Timer Complete
+    description: Any phase has finished
+
+  - name: work_complete
+    displayName: Work Complete
+    description: A focus session has finished
+
+  - name: break_complete
+    displayName: Break Complete
+    description: A short break has finished
+
+  - name: long_break_complete
+    displayName: Long Break Complete
+    description: A long break has finished
+
+  - name: phase_change
+    displayName: Phase Change
+    description: Switched to a new phase
+
+  - name: work_start
+    displayName: Work Started
+    description: A focus session has begun
+
+  - name: break_start
+    displayName: Break Started
+    description: A break session has begun
+
+  - name: timer_paused
+    displayName: Timer Paused
+    description: The timer was paused
+
+  - name: timer_resumed
+    displayName: Timer Resumed
+    description: The timer was resumed
+
+  - name: cycle_complete
+    displayName: Cycle Complete
+    description: All work rounds finished
+
+  - name: sharp_collision
+    displayName: Dial Click
+    description: Tactile feedback when turning the dial

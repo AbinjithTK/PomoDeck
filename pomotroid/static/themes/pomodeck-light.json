@@ -1,0 +1,17 @@
+{
+  "name": "PomoDeck Light",
+  "colors": {
+    "--color-long-round": "#5B8DEF",
+    "--color-short-round": "#6C5CE7",
+    "--color-focus-round": "#6C5CE7",
+    "--color-background": "#f5f5f7",
+    "--color-background-light": "#eaeaee",
+    "--color-background-lightest": "#d1d1d6",
+    "--color-foreground": "#1a1d23",
+    "--color-foreground-darker": "#5a6070",
+    "--color-foreground-darkest": "#8890a0",
+    "--color-accent": "#6C5CE7",
+    "--color-separator": "#d1d1d6",
+    "--color-hover": "#dddde280"
+  }
+}

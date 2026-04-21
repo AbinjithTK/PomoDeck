@@ -1,0 +1,23 @@
+haptics:
+  timer_complete:
+    DEFAULT: subtle_collision
+  work_complete:
+    DEFAULT: subtle_collision
+  break_complete:
+    DEFAULT: subtle_collision
+  long_break_complete:
+    DEFAULT: subtle_collision
+  cycle_complete:
+    DEFAULT: subtle_collision
+  work_start:
+    DEFAULT: subtle_collision
+  break_start:
+    DEFAULT: subtle_collision
+  timer_paused:
+    DEFAULT: subtle_collision
+  timer_resumed:
+    DEFAULT: subtle_collision
+  phase_change:
+    DEFAULT: subtle_collision
+  sharp_collision:
+    DEFAULT: damp_collision

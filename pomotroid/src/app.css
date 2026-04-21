@@ -1,0 +1,112 @@
+/* Global CSS — CSS custom properties for theming.
+   The active theme overrides these values at runtime via Tauri IPC. */
+
+/* ---------------------------------------------------------------------------
+   Embedded variable fonts
+   font-display: block — app is offline-first, no FOUT risk
+   --------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Mona Sans';
+  src: url('/fonts/MonaSansVF.woff2') format('woff2');
+  font-weight: 200 900;
+  font-stretch: 75% 125%;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Mona Sans Mono';
+  src: url('/fonts/MonaSansMonoVF.woff2') format('woff2');
+  font-weight: 200 900;
+  font-stretch: 75% 125%;
+  font-display: block;
+}
+
+:root {
+  /* Theme colors (defaults — PomoDeck dark; overridden by the active theme at runtime) */
+  --color-long-round: #3C82E6;
+  --color-short-round: #00D4AA;
+  --color-focus-round: #00D4AA;
+  --color-background: #1a1d23;
+  --color-background-light: #22262e;
+  --color-background-lightest: #8b95a5;
+  --color-foreground: #e8eaed;
+  --color-foreground-darker: #8b95a5;
+  --color-foreground-darkest: #b0b8c4;
+  --color-accent: #00D4AA;
+
+  /* Derived chrome tokens — adapt automatically between dark and light themes.
+     color-mix with transparent produces the foreground color at N% opacity,
+     which creates subtle dark overlays on light themes and light overlays on
+     dark themes without any hardcoded rgba(255,255,255,...) values. */
+  --color-separator: color-mix(in oklch, var(--color-foreground) 8%, transparent);
+  --color-hover: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+
+  /* Transition timing tokens — components reference these for consistency */
+  --transition-default: 0.2s ease;
+  --transition-snappy: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.35s ease;
+
+  /* Optical sizing — adapts letterforms to font-size automatically */
+  font-optical-sizing: auto;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Mona Sans', system-ui, sans-serif;
+  color: var(--color-foreground);
+  user-select: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html {
+  background: transparent;
+}
+
+body {
+  background-color: var(--color-background);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Hide all scrollbars globally */
+::-webkit-scrollbar { display: none; }
+
+/* ---------------------------------------------------------------------------
+   Keyframes (available to all scoped component stylesheets)
+   --------------------------------------------------------------------------- */
+
+@keyframes app-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes icon-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

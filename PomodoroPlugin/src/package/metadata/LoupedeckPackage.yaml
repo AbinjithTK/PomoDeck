@@ -1,0 +1,35 @@
+type: plugin4
+name: PomoDeck
+displayName: PomoDeck
+version: 1.0.0
+author: AJ Studio
+
+description: >
+  PomoDeck — A flow-state Pomodoro timer for Logitech Creative Console.
+  Features a real-time timer with Classic and Liquid themes, task management,
+  flow scoring with animated tomato mascot, physics-based pomo jar, ambient
+  tick sounds, and haptic feedback. Connects to the PomoDeck desktop app
+  for web/app blocking, statistics, and full session tracking.
+
+copyright: Copyright © 2026 AJ Studio. All rights reserved.
+
+# ARGB icon colors — ensures icon renders correctly in Options+ and Marketplace
+backgroundColor: 4279900451
+foregroundColor: 4294967295
+textColor: 4294967295
+
+license: MIT
+licenseUrl: https://opensource.org/licenses/MIT
+supportPageUrl: https://github.com/ajstudio/pomodeck/issues
+homePageUrl: https://github.com/ajstudio/pomodeck
+
+pluginFileName: PomoDeckPlugin.dll
+pluginFolderWin: bin
+
+supportedDevices:
+  - LoupedeckCtFamily
+
+pluginCapabilities:
+  - HasHapticMapping
+
+minimumLoupedeckVersion: 6.0

@@ -1,0 +1,12 @@
+.claude/
+.DS_Store
+node_modules/
+npm-debug.log
+npm-debug.log.*
+thumbs.db
+!.gitkeep
+*.pem
+*.key
+*.cert
+.svelte-kit/
+build/

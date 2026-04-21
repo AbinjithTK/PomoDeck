@@ -1,0 +1,17 @@
+{
+  "name": "PomoDeck",
+  "colors": {
+    "--color-long-round": "#3C82E6",
+    "--color-short-round": "#00D4AA",
+    "--color-focus-round": "#00D4AA",
+    "--color-background": "#1a1d23",
+    "--color-background-light": "#22262e",
+    "--color-background-lightest": "#8b95a5",
+    "--color-foreground": "#e8eaed",
+    "--color-foreground-darker": "#8b95a5",
+    "--color-foreground-darkest": "#b0b8c4",
+    "--color-accent": "#00D4AA",
+    "--color-separator": "#2a2e36",
+    "--color-hover": "#2a2e3680"
+  }
+}

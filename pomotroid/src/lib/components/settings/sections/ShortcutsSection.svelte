@@ -1,0 +1,263 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { settings } from '$lib/stores/settings';
+  import { setSetting, reloadShortcuts, accessibilityTrusted } from '$lib/ipc';
+  import ShortcutInput from '$lib/components/ShortcutInput.svelte';
+  import LocalShortcutInput from '$lib/components/LocalShortcutInput.svelte';
+  import SettingsToggle from '$lib/components/settings/SettingsToggle.svelte';
+  import * as m from '$paraglide/messages.js';
+  import { isMac } from '$lib/utils/platform';
+  import { openUrl } from '@tauri-apps/plugin-opener';
+
+  const ACCESSIBILITY_URL =
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility';
+
+  let trusted = $state(true);
+
+  async function checkTrusted() {
+    trusted = await accessibilityTrusted();
+  }
+
+  onMount(() => {
+    if (!isMac) return;
+
+    checkTrusted();
+
+    function onFocus() {
+      if (!trusted) checkTrusted();
+    }
+
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  });
+
+  async function toggle(dbKey: string, current: boolean) {
+    const updated = await setSetting(dbKey, current ? 'false' : 'true');
+    settings.set(updated);
+  }
+
+  async function setShortcut(dbKey: string, value: string) {
+    const updated = await setSetting(dbKey, value);
+    settings.set(updated);
+    await reloadShortcuts();
+  }
+
+  async function setLocalShortcut(dbKey: string, value: string) {
+    const updated = await setSetting(dbKey, value);
+    settings.set(updated);
+  }
+</script>
+
+<div class="section">
+  <!-- Local shortcuts first -->
+  <div class="shortcut-group">
+    <div class="group-heading">{m.shortcuts_local_heading()}</div>
+    <p class="note">{m.shortcuts_local_note()}</p>
+
+    <div class="row">
+      <span class="label">{m.shortcuts_local_toggle_timer()}</span>
+      <LocalShortcutInput
+        value={$settings.local_shortcut_toggle}
+        onchange={(v) => setLocalShortcut('local_shortcut_toggle', v)}
+      />
+    </div>
+
+    <div class="row">
+      <span class="label">{m.shortcuts_local_reset_round()}</span>
+      <LocalShortcutInput
+        value={$settings.local_shortcut_reset}
+        onchange={(v) => setLocalShortcut('local_shortcut_reset', v)}
+      />
+    </div>
+
+    <div class="row">
+      <span class="label">{m.shortcuts_local_skip_round()}</span>
+      <LocalShortcutInput
+        value={$settings.local_shortcut_skip}
+        onchange={(v) => setLocalShortcut('local_shortcut_skip', v)}
+      />
+    </div>
+
+    <div class="row">
+      <span class="label">{m.shortcuts_local_volume_down()}</span>
+      <LocalShortcutInput
+        value={$settings.local_shortcut_volume_down}
+        onchange={(v) => setLocalShortcut('local_shortcut_volume_down', v)}
+      />
+    </div>
+
+    <div class="row">
+      <span class="label">{m.shortcuts_local_volume_up()}</span>
+      <LocalShortcutInput
+        value={$settings.local_shortcut_volume_up}
+        onchange={(v) => setLocalShortcut('local_shortcut_volume_up', v)}
+      />
+    </div>
+
+    <div class="row">
+      <span class="label">{m.shortcuts_local_mute()}</span>
+      <LocalShortcutInput
+        value={$settings.local_shortcut_mute}
+        onchange={(v) => setLocalShortcut('local_shortcut_mute', v)}
+      />
+    </div>
+
+    <div class="row">
+      <span class="label">{m.shortcuts_local_fullscreen()}</span>
+      <LocalShortcutInput
+        value={$settings.local_shortcut_fullscreen}
+        onchange={(v) => setLocalShortcut('local_shortcut_fullscreen', v)}
+      />
+    </div>
+  </div>
+
+  <!-- Global shortcuts second -->
+  <div class="shortcut-group">
+    <div class="group-heading">{m.shortcuts_global_heading()}</div>
+    <p class="note">{m.shortcuts_note()}</p>
+
+    <SettingsToggle
+      label={m.shortcuts_toggle_enabled()}
+      description={m.shortcuts_toggle_enabled_desc()}
+      checked={$settings.global_shortcuts_enabled}
+      onclick={() => toggle('global_shortcuts_enabled', $settings.global_shortcuts_enabled)}
+    />
+
+    {#if isMac && !trusted}
+      <div class="accessibility-notice">
+        <p class="notice-text">{m.shortcuts_accessibility_notice()}</p>
+        <button class="notice-btn" onclick={() => openUrl(ACCESSIBILITY_URL)}>
+          {m.shortcuts_accessibility_open()}
+        </button>
+      </div>
+    {/if}
+
+    <div class="shortcuts-body" class:disabled={!$settings.global_shortcuts_enabled}>
+      <div class="row">
+        <span class="label">{m.shortcuts_toggle_timer()}</span>
+        <ShortcutInput
+          value={$settings.shortcut_toggle}
+          onchange={(v) => setShortcut('shortcut_toggle', v)}
+        />
+      </div>
+
+      <div class="row">
+        <span class="label">{m.shortcuts_reset_timer()}</span>
+        <ShortcutInput
+          value={$settings.shortcut_reset}
+          onchange={(v) => setShortcut('shortcut_reset', v)}
+        />
+      </div>
+
+      <div class="row">
+        <span class="label">{m.shortcuts_skip_round()}</span>
+        <ShortcutInput
+          value={$settings.shortcut_skip}
+          onchange={(v) => setShortcut('shortcut_skip', v)}
+        />
+      </div>
+
+      <div class="row">
+        <span class="label">{m.shortcuts_restart_round()}</span>
+        <ShortcutInput
+          value={$settings.shortcut_restart}
+          onchange={(v) => setShortcut('shortcut_restart', v)}
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .section {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+  }
+
+  .shortcuts-body {
+    transition: opacity 0.15s;
+  }
+
+  .shortcuts-body.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .accessibility-notice {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 16px;
+    padding: 10px 14px;
+    border: 1px solid color-mix(in oklch, var(--color-foreground-darker) 35%, transparent);
+    border-radius: 6px;
+    background: color-mix(in oklch, var(--color-foreground-darker) 8%, transparent);
+  }
+
+  .notice-text {
+    font-size: 0.75rem;
+    color: var(--color-foreground-darker);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .notice-btn {
+    align-self: flex-start;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    color: var(--color-foreground);
+    background: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+    border: 1px solid color-mix(in oklch, var(--color-foreground) 20%, transparent);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background var(--transition-default);
+  }
+
+  .notice-btn:hover {
+    background: color-mix(in oklch, var(--color-foreground) 18%, transparent);
+  }
+
+  .note {
+    font-size: 0.75rem;
+    color: var(--color-foreground-darker, var(--color-foreground));
+    opacity: 0.65;
+    padding: 8px 20px 16px;
+    line-height: 1.5;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--color-separator);
+  }
+
+  .label {
+    font-size: 0.85rem;
+    color: var(--color-foreground);
+    letter-spacing: 0.02em;
+  }
+
+  .shortcut-group {
+    border-top: 1px solid var(--color-separator);
+    padding-top: 4px;
+  }
+
+  .shortcut-group:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .group-heading {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-foreground-darker, var(--color-foreground));
+    opacity: 0.6;
+    margin: 0;
+    padding: 16px 20px 6px;
+  }
+</style>

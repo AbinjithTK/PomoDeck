@@ -1,0 +1,46 @@
+# Rust
+pomotroid/src-tauri/target/
+
+# Node
+pomotroid/node_modules/
+pomotroid/build/
+pomotroid/.svelte-kit/
+pomotroid/.paraglide/
+
+# .NET
+PomodoroPlugin/src/obj/
+PomodoroPlugin/src/bin/
+PomodoroPlugin/bin/
+
+# Loupedeck decompiled references (not our code)
+LightroomDecompiled/
+PCMonitorDecompiled/
+PluginApiDecompiled/
+
+# Restore backups
+pomotroid_restore/
+chatrestore/
+
+# Logs and temp files
+*.log
+debug.log
+logi_options_logs/
+gen_icon.py
+
+# Analysis docs (not source code)
+PomoDeck-UserFlow-Analysis.md
+PomoDeck-Demo-Voiceover.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.kiro/
+
+# Large binary source icon
+pomodeck-icon-1024.png
+Pomodeck logo-01.png
+Pomodeck logo-02.png
+Screenshot*.png

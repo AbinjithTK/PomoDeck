@@ -1,0 +1,481 @@
+pub mod defaults;
+
+use rusqlite::{params, Connection, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+/// All user-configurable settings, fully typed.
+///
+/// Time fields are in **seconds** (converted from stored minutes).
+/// `volume` is in the **0.0–1.0** range (converted from stored 0–100).
+///
+/// This struct is serialized to JSON and sent to the Svelte frontend via Tauri IPC.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Settings {
+    pub always_on_top: bool,
+    pub break_always_on_top: bool,
+    pub auto_start_work: bool,
+    pub auto_start_break: bool,
+    pub tray_icon_enabled: bool,
+    pub min_to_tray: bool,
+    pub min_to_tray_on_close: bool,
+    pub notifications_enabled: bool,
+    /// Number of work rounds before a long break.
+    pub long_break_interval: u32,
+    pub short_breaks_enabled: bool,
+    pub long_breaks_enabled: bool,
+    /// When true the dial arc starts full and subtracts; when false it fills from empty.
+    pub dial_countdown: bool,
+    pub theme_mode: String,
+    pub theme_light: String,
+    pub theme_dark: String,
+    pub tick_sounds_during_work: bool,
+    pub tick_sounds_during_break: bool,
+    /// Work round duration in seconds.
+    pub time_work_secs: u32,
+    /// Short break duration in seconds.
+    pub time_short_break_secs: u32,
+    /// Long break duration in seconds.
+    pub time_long_break_secs: u32,
+    /// Audio volume in the 0.0–1.0 range.
+    pub volume: f32,
+    pub shortcut_toggle: String,
+    pub shortcut_reset: String,
+    pub shortcut_skip: String,
+    pub shortcut_restart: String,
+    pub websocket_enabled: bool,
+    pub websocket_port: u16,
+    pub language: String,
+    pub verbose_logging: bool,
+    pub check_for_updates: bool,
+    pub global_shortcuts_enabled: bool,
+    /// Local shortcut key bindings (KeyboardEvent.key strings, frontend-only).
+    pub local_shortcut_toggle: String,
+    pub local_shortcut_reset: String,
+    pub local_shortcut_skip: String,
+    pub local_shortcut_volume_down: String,
+    pub local_shortcut_volume_up: String,
+    pub local_shortcut_mute: String,
+    pub local_shortcut_fullscreen: String,
+    // Blocking
+    pub blocking_enabled: bool,
+    pub blocked_apps: String,
+    pub blocked_sites: String,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            always_on_top: false,
+            break_always_on_top: false,
+            auto_start_work: true,
+            auto_start_break: true,
+            tray_icon_enabled: true,
+            min_to_tray: true,
+            min_to_tray_on_close: true,
+            notifications_enabled: false,
+            long_break_interval: 4,
+            short_breaks_enabled: true,
+            long_breaks_enabled: true,
+            dial_countdown: true,
+            theme_mode: "auto".to_string(),
+            theme_light: "PomoDeck Light".to_string(),
+            theme_dark: "PomoDeck".to_string(),
+            tick_sounds_during_work: true,
+            tick_sounds_during_break: false,
+            time_work_secs: 25 * 60,
+            time_short_break_secs: 5 * 60,
+            time_long_break_secs: 15 * 60,
+            volume: 1.0,
+            #[cfg(target_os = "macos")]
+            shortcut_toggle: "Super+Shift+1".to_string(),
+            #[cfg(not(target_os = "macos"))]
+            shortcut_toggle: "Control+F1".to_string(),
+            #[cfg(target_os = "macos")]
+            shortcut_reset: "Super+Shift+2".to_string(),
+            #[cfg(not(target_os = "macos"))]
+            shortcut_reset: "Control+F2".to_string(),
+            #[cfg(target_os = "macos")]
+            shortcut_skip: "Super+Shift+3".to_string(),
+            #[cfg(not(target_os = "macos"))]
+            shortcut_skip: "Control+F3".to_string(),
+            #[cfg(target_os = "macos")]
+            shortcut_restart: "Super+Shift+4".to_string(),
+            #[cfg(not(target_os = "macos"))]
+            shortcut_restart: "Control+F4".to_string(),
+            websocket_enabled: false,
+            websocket_port: 1314,
+            language: "auto".to_string(),
+            verbose_logging: false,
+            check_for_updates: true,
+            global_shortcuts_enabled: false,
+            local_shortcut_toggle: " ".to_string(),
+            local_shortcut_reset: "ArrowLeft".to_string(),
+            local_shortcut_skip: "ArrowRight".to_string(),
+            local_shortcut_volume_down: "ArrowDown".to_string(),
+            local_shortcut_volume_up: "ArrowUp".to_string(),
+            local_shortcut_mute: "m".to_string(),
+            local_shortcut_fullscreen: "F11".to_string(),
+            blocking_enabled: false,
+            blocked_apps: String::new(),
+            blocked_sites: "youtube.com,twitter.com,x.com,reddit.com,facebook.com,instagram.com,tiktok.com,twitch.tv,netflix.com".to_string(),
+        }
+    }
+}
+
+/// Seed the `settings` table with default values for any missing keys.
+/// Uses `INSERT OR IGNORE` so existing customizations are preserved.
+///
+/// Shortcut defaults are platform-specific and seeded before the common
+/// defaults so that INSERT OR IGNORE lets them win on first launch.
+pub fn seed_defaults(conn: &Connection) -> Result<()> {
+    // Platform-specific shortcut defaults (seeded first so they win).
+    #[cfg(target_os = "macos")]
+    let shortcut_defaults: &[(&str, &str)] = &[
+        ("shortcut_toggle",  "Super+Shift+1"),
+        ("shortcut_reset",   "Super+Shift+2"),
+        ("shortcut_skip",    "Super+Shift+3"),
+        ("shortcut_restart", "Super+Shift+4"),
+    ];
+    #[cfg(not(target_os = "macos"))]
+    let shortcut_defaults: &[(&str, &str)] = &[
+        ("shortcut_toggle",  "Control+F1"),
+        ("shortcut_reset",   "Control+F2"),
+        ("shortcut_skip",    "Control+F3"),
+        ("shortcut_restart", "Control+F4"),
+    ];
+
+    for (key, value) in shortcut_defaults {
+        conn.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?1, ?2)",
+            params![key, value],
+        )?;
+    }
+
+    for (key, value) in defaults::DEFAULTS {
+        conn.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?1, ?2)",
+            params![key, value],
+        )?;
+    }
+
+    // Force-enable WebSocket for plugin connectivity
+    conn.execute(
+        "UPDATE settings SET value = 'true' WHERE key = 'websocket_enabled' AND value = 'false'",
+        [],
+    )?;
+
+    // Force-enable tray + minimize to tray for seamless background operation
+    conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('tray_icon_enabled', 'true')", [])?;
+    conn.execute("UPDATE settings SET value = 'true' WHERE key = 'tray_icon_enabled' AND value = 'false'", [])?;
+    conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('min_to_tray', 'true')", [])?;
+    conn.execute("UPDATE settings SET value = 'true' WHERE key = 'min_to_tray' AND value = 'false'", [])?;
+    conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('min_to_tray_on_close', 'true')", [])?;
+    conn.execute("UPDATE settings SET value = 'true' WHERE key = 'min_to_tray_on_close' AND value = 'false'", [])?;
+
+    // Migrate old theme names to PomoDeck
+    conn.execute("UPDATE settings SET value = 'PomoDeck' WHERE key = 'theme_dark' AND value = 'Pomotroid'", [])?;
+    conn.execute("UPDATE settings SET value = 'PomoDeck Light' WHERE key = 'theme_light' AND value = 'Pomotroid Light'", [])?;
+    // Force dark mode as default
+    conn.execute("UPDATE settings SET value = 'dark' WHERE key = 'theme_mode' AND value = 'auto'", [])?;
+
+    log::debug!("[settings] defaults seeded");
+    Ok(())
+}
+
+/// Load all settings from the database. Falls back to `Settings::default()`
+/// values for any key that is missing or cannot be parsed.
+pub fn load(conn: &Connection) -> Result<Settings> {
+    let mut stmt = conn.prepare("SELECT key, value FROM settings")?;
+    let map: HashMap<String, String> = stmt
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    log::debug!("[settings] loaded {} keys from db", map.len());
+    let d = Settings::default();
+    Ok(Settings {
+        always_on_top: parse_bool(&map, "always_on_top", d.always_on_top),
+        break_always_on_top: parse_bool(&map, "break_always_on_top", d.break_always_on_top),
+        auto_start_work: parse_bool(&map, "auto_start_work", d.auto_start_work),
+        auto_start_break: parse_bool(&map, "auto_start_break", d.auto_start_break),
+        tray_icon_enabled: parse_bool(&map, "tray_icon_enabled", d.tray_icon_enabled),
+        min_to_tray: parse_bool(&map, "min_to_tray", d.min_to_tray),
+        min_to_tray_on_close: parse_bool(&map, "min_to_tray_on_close", d.min_to_tray_on_close),
+        notifications_enabled: parse_bool(&map, "notifications", d.notifications_enabled),
+        long_break_interval: parse_u32(&map, "work_rounds", d.long_break_interval),
+        short_breaks_enabled: parse_bool(&map, "short_breaks_enabled", d.short_breaks_enabled),
+        long_breaks_enabled: parse_bool(&map, "long_breaks_enabled", d.long_breaks_enabled),
+        dial_countdown: parse_bool(&map, "dial_countdown", d.dial_countdown),
+        theme_mode: map
+            .get("theme_mode")
+            .cloned()
+            .unwrap_or(d.theme_mode),
+        theme_light: map
+            .get("theme_light")
+            .cloned()
+            .unwrap_or(d.theme_light),
+        theme_dark: map
+            .get("theme_dark")
+            .cloned()
+            .unwrap_or(d.theme_dark),
+        tick_sounds_during_work: parse_bool(&map, "tick_sounds_work", d.tick_sounds_during_work),
+        tick_sounds_during_break: parse_bool(
+            &map,
+            "tick_sounds_break",
+            d.tick_sounds_during_break,
+        ),
+        // DB stores seconds directly (since MIGRATION_2).
+        time_work_secs: parse_u32(&map, "time_work_secs", d.time_work_secs),
+        time_short_break_secs: parse_u32(&map, "time_short_break_secs", d.time_short_break_secs),
+        time_long_break_secs: parse_u32(&map, "time_long_break_secs", d.time_long_break_secs),
+        // DB stores 0–100; convert to 0.0–1.0.
+        volume: (parse_u32(&map, "volume", (d.volume * 100.0) as u32) as f32 / 100.0)
+            .clamp(0.0, 1.0),
+        shortcut_toggle: map
+            .get("shortcut_toggle")
+            .cloned()
+            .unwrap_or(d.shortcut_toggle),
+        shortcut_reset: map
+            .get("shortcut_reset")
+            .cloned()
+            .unwrap_or(d.shortcut_reset),
+        shortcut_skip: map
+            .get("shortcut_skip")
+            .cloned()
+            .unwrap_or(d.shortcut_skip),
+        shortcut_restart: map
+            .get("shortcut_restart")
+            .cloned()
+            .unwrap_or(d.shortcut_restart),
+        websocket_enabled: parse_bool(&map, "websocket_enabled", d.websocket_enabled),
+        websocket_port: parse_u32(&map, "websocket_port", d.websocket_port as u32) as u16,
+        language: map.get("language").cloned().unwrap_or(d.language),
+        verbose_logging: parse_bool(&map, "verbose_logging", d.verbose_logging),
+        check_for_updates: parse_bool(&map, "check_for_updates", d.check_for_updates),
+        global_shortcuts_enabled: parse_bool(&map, "global_shortcuts_enabled", d.global_shortcuts_enabled),
+        local_shortcut_toggle: map.get("local_shortcut_toggle").cloned().unwrap_or(d.local_shortcut_toggle),
+        local_shortcut_reset: map.get("local_shortcut_reset").cloned().unwrap_or(d.local_shortcut_reset),
+        local_shortcut_skip: map.get("local_shortcut_skip").cloned().unwrap_or(d.local_shortcut_skip),
+        local_shortcut_volume_down: map.get("local_shortcut_volume_down").cloned().unwrap_or(d.local_shortcut_volume_down),
+        local_shortcut_volume_up: map.get("local_shortcut_volume_up").cloned().unwrap_or(d.local_shortcut_volume_up),
+        local_shortcut_mute: map.get("local_shortcut_mute").cloned().unwrap_or(d.local_shortcut_mute),
+        local_shortcut_fullscreen: map.get("local_shortcut_fullscreen").cloned().unwrap_or(d.local_shortcut_fullscreen),
+        blocking_enabled: parse_bool(&map, "blocking_enabled", d.blocking_enabled),
+        blocked_apps: map.get("blocked_apps").cloned().unwrap_or(d.blocked_apps),
+        blocked_sites: map.get("blocked_sites").cloned().unwrap_or(d.blocked_sites),
+    })
+}
+
+/// Upsert a single setting by its DB key. The caller is responsible for
+/// converting typed values back to their stored string representation.
+pub fn save_setting(conn: &Connection, key: &str, value: &str) -> Result<()> {
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES (?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![key, value],
+    )?;
+    Ok(())
+}
+
+pub fn get_setting(conn: &Connection, key: &str) -> Option<String> {
+    conn.query_row(
+        "SELECT value FROM settings WHERE key = ?1",
+        params![key],
+        |row| row.get(0),
+    )
+    .ok()
+}
+
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
+
+fn parse_bool(map: &HashMap<String, String>, key: &str, default: bool) -> bool {
+    map.get(key).map(|v| v == "true").unwrap_or(default)
+}
+
+fn parse_u32(map: &HashMap<String, String>, key: &str, default: u32) -> u32 {
+    map.get(key)
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
+}
+
+// ---------------------------------------------------------------------------
+// Tests (DATA-02 acceptance criteria)
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::migrations;
+
+    fn setup() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        migrations::run(&conn).unwrap();
+        conn
+    }
+
+    #[test]
+    fn defaults_round_trip() {
+        let conn = setup();
+        seed_defaults(&conn).unwrap();
+        let s = load(&conn).unwrap();
+
+        assert_eq!(s.time_work_secs, 25 * 60);
+        assert_eq!(s.time_short_break_secs, 5 * 60);
+        assert_eq!(s.time_long_break_secs, 15 * 60);
+        assert_eq!(s.long_break_interval, 4);
+        assert!((s.volume - 1.0).abs() < f32::EPSILON);
+        #[cfg(target_os = "macos")]
+        {
+            assert_eq!(s.shortcut_toggle, "Super+Shift+1");
+            assert_eq!(s.shortcut_reset, "Super+Shift+2");
+            assert_eq!(s.shortcut_skip, "Super+Shift+3");
+            assert_eq!(s.shortcut_restart, "Super+Shift+4");
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            assert_eq!(s.shortcut_toggle, "Control+F1");
+            assert_eq!(s.shortcut_reset, "Control+F2");
+            assert_eq!(s.shortcut_skip, "Control+F3");
+            assert_eq!(s.shortcut_restart, "Control+F4");
+        }
+        assert!(!s.always_on_top);
+        assert!(s.websocket_enabled);
+        assert_eq!(s.websocket_port, 1314);
+        assert_eq!(s.theme_mode, "dark");
+        assert_eq!(s.theme_light, "PomoDeck Light");
+        assert_eq!(s.theme_dark, "PomoDeck");
+        assert_eq!(s.language, "auto");
+        assert!(!s.verbose_logging);
+        assert!(s.tick_sounds_during_work);
+        assert!(!s.tick_sounds_during_break);
+    }
+
+    #[test]
+    fn seed_is_idempotent() {
+        let conn = setup();
+        seed_defaults(&conn).unwrap();
+        // Second seed must not overwrite existing values.
+        save_setting(&conn, "always_on_top", "true").unwrap();
+        seed_defaults(&conn).unwrap();
+        let s = load(&conn).unwrap();
+        assert!(s.always_on_top, "seed_defaults must not overwrite saved value");
+    }
+
+    #[test]
+    fn save_and_reload_bool() {
+        let conn = setup();
+        seed_defaults(&conn).unwrap();
+        save_setting(&conn, "always_on_top", "true").unwrap();
+        let s = load(&conn).unwrap();
+        assert!(s.always_on_top);
+    }
+
+    #[test]
+    fn save_and_reload_volume() {
+        let conn = setup();
+        seed_defaults(&conn).unwrap();
+        save_setting(&conn, "volume", "50").unwrap();
+        let s = load(&conn).unwrap();
+        assert!((s.volume - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn save_and_reload_time() {
+        let conn = setup();
+        seed_defaults(&conn).unwrap();
+        save_setting(&conn, "time_work_secs", "1800").unwrap();
+        let s = load(&conn).unwrap();
+        assert_eq!(s.time_work_secs, 1800);
+    }
+
+    #[test]
+    fn save_and_reload_sub_minute_time() {
+        let conn = setup();
+        seed_defaults(&conn).unwrap();
+        save_setting(&conn, "time_work_secs", "339").unwrap();
+        let s = load(&conn).unwrap();
+        assert_eq!(s.time_work_secs, 339);
+    }
+
+    #[test]
+    fn missing_keys_fall_back_to_defaults() {
+        let conn = setup();
+        // No seed — table is empty.
+        let s = load(&conn).unwrap();
+        assert_eq!(s, Settings::default());
+    }
+
+    #[test]
+    fn reset_defaults_restores_all_settings() {
+        // Mutate several settings (timer-related and others).
+        let conn = setup();
+        seed_defaults(&conn).unwrap();
+        save_setting(&conn, "time_work_secs", "2700").unwrap();
+        save_setting(&conn, "time_short_break_secs", "600").unwrap();
+        save_setting(&conn, "work_rounds", "8").unwrap();
+        save_setting(&conn, "always_on_top", "true").unwrap();
+
+        // Simulate the reset_defaults command: wipe all rows then re-seed.
+        conn.execute("DELETE FROM settings", []).unwrap();
+        seed_defaults(&conn).unwrap();
+
+        let s = load(&conn).unwrap();
+        // Timer settings must be restored to defaults.
+        assert_eq!(s.time_work_secs, 25 * 60, "work duration must reset to 25 min");
+        assert_eq!(s.time_short_break_secs, 5 * 60, "short break must reset to 5 min");
+        assert_eq!(s.long_break_interval, 4, "work rounds must reset to 4");
+        // Non-timer settings are also wiped and reseeded to their defaults.
+        assert!(!s.always_on_top, "always_on_top must reset to default false");
+    }
+
+    #[test]
+    fn migration_2_converts_mins_to_secs_and_removes_old_keys() {
+        // Simulate a pre-migration DB: schema version 1, `*_mins` keys present.
+        let conn = Connection::open_in_memory().unwrap();
+        // Run only migration 1 manually to get v1 state, plus sessions table for later migrations.
+        conn.execute_batch("BEGIN; CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sessions (id INTEGER PRIMARY KEY, started_at TEXT NOT NULL DEFAULT (datetime('now')), duration_secs INTEGER NOT NULL DEFAULT 0, completed INTEGER NOT NULL DEFAULT 0, round_type TEXT NOT NULL DEFAULT 'work'); INSERT INTO schema_version VALUES (1); COMMIT;").unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('time_work_mins', '30')", []).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('time_short_break_mins', '7')", []).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('time_long_break_mins', '20')", []).unwrap();
+
+        // Now run the full migration suite — only MIGRATION_2 should fire.
+        crate::db::migrations::run(&conn).unwrap();
+
+        // New keys must exist with correct second values.
+        let work: String = conn.query_row("SELECT value FROM settings WHERE key = 'time_work_secs'", [], |r| r.get(0)).unwrap();
+        assert_eq!(work, "1800");
+        let short: String = conn.query_row("SELECT value FROM settings WHERE key = 'time_short_break_secs'", [], |r| r.get(0)).unwrap();
+        assert_eq!(short, "420");
+        let long: String = conn.query_row("SELECT value FROM settings WHERE key = 'time_long_break_secs'", [], |r| r.get(0)).unwrap();
+        assert_eq!(long, "1200");
+
+        // Old keys must be gone.
+        let old_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM settings WHERE key LIKE '%_mins'",
+            [], |r| r.get(0),
+        ).unwrap();
+        assert_eq!(old_count, 0, "old *_mins keys must be absent after MIGRATION_2");
+    }
+
+    #[test]
+    fn boolean_settings_survive_multiple_writes() {
+        // Writing the same boolean key repeatedly must not corrupt the value.
+        let conn = setup();
+        seed_defaults(&conn).unwrap();
+
+        for _ in 0..5 {
+            save_setting(&conn, "auto_start_work", "true").unwrap();
+        }
+        let s = load(&conn).unwrap();
+        assert!(s.auto_start_work, "auto_start_work must remain true after repeated writes");
+
+        for _ in 0..5 {
+            save_setting(&conn, "auto_start_work", "false").unwrap();
+        }
+        let s = load(&conn).unwrap();
+        assert!(!s.auto_start_work, "auto_start_work must be false after repeated false writes");
+    }
+}

@@ -1,0 +1,45 @@
+[package]
+name = "pomodeck"
+version = "1.5.0"
+description = "PomoDeck — Flow-state Pomodoro timer with Loupedeck hardware integration"
+authors = ["AJ Studio"]
+edition = "2021"
+
+[lib]
+name = "pomodeck_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-log = "2"
+log = "0.4"
+tauri-plugin-notification = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-autostart = "2"
+
+rusqlite = { version = "0.39", features = ["bundled"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["ws"] }
+futures-util = "0.3"
+
+rodio = { version = "0.22", default-features = false, features = ["playback", "wav", "mp3", "vorbis"] }
+tiny-skia = "0.12"
+notify = "8"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+raw-window-handle = "0.6"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_Foundation", "Win32_Graphics_Dwm"] }
+winreg = "0.55"

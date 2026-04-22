@@ -1,7 +1,7 @@
 # PomoDeck
 
 <p align="center">
-  <img src="images/pomodeck-logo.png" width="360" alt="PomoDeck" />
+  <img src="DevStudio 2026 Submission/images/pomodeck-logo.png" width="360" alt="PomoDeck" />
 </p>
 
 **Focus you can feel.**

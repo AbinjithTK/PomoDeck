@@ -184,8 +184,10 @@ If you find rough edges, that's the context. We chose to ship more features at h
 PomoDeck isn't limited to the MX Creative Console. Every action is available as a standalone button that works with the Actions Ring on any supported Logitech device — MX Master 4, MX Anywhere 4, and others. We added dedicated actions like Timer Style specifically so Actions Ring users get the full PomoDeck experience without needing the console. Nobody should miss out.
 
 <!-- Drop actionsringdemo.png into images/ folder -->
-![Actions Ring](DevStudio 2026 Submission/images/actions-ring.png)
-
+![Actions Ring](DevStudio 2026 Submission/images/Actions-ring.png)
+<p align="center">
+  <img src="DevStudio 2026 Submission/images/Actions-ring.png" width="700" alt="PomoDeck — App and Plugin working together" />
+</p>
 ---
 
 ## References

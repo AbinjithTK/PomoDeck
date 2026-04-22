@@ -54,9 +54,10 @@ namespace Loupedeck.PomoDeckPlugin
             // Pre-extract tick sound so it's ready for ambient playback
             AmbientTick.EnsureReady();
 
-            // Periodic GC to prevent memory buildup from SkiaSharp renders
-            _gcTimer = new System.Timers.Timer(300000) { AutoReset = true };
-            _gcTimer.Elapsed += (_, _) => { try { GC.Collect(1, GCCollectionMode.Optimized, false); } catch { } };
+            // Periodic GC — Gen2 every 2 minutes to reclaim SkiaSharp native memory.
+            // Gen0 is handled per-frame in PomoDeckWidget. This catches all other widgets.
+            _gcTimer = new System.Timers.Timer(120000) { AutoReset = true };
+            _gcTimer.Elapsed += (_, _) => { try { GC.Collect(2, GCCollectionMode.Optimized, false, true); } catch { } };
             _gcTimer.Start();
 
             // Bridge connects on background thread — never blocks Load
@@ -95,7 +96,12 @@ namespace Loupedeck.PomoDeckPlugin
                 else
                 {
                     try { CleanupProxy(); } catch { }
-                    OnSettingsChanged();
+                    // Delay redraw to let the bridge fully disconnect and state clear
+                    System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                    {
+                        System.Threading.Thread.Sleep(300);
+                        if (!_unloading) OnSettingsChanged();
+                    });
                 }
             };
             Bridge.StateUpdated += () =>
@@ -145,6 +151,7 @@ namespace Loupedeck.PomoDeckPlugin
             _jarListeners.Clear();
 
             SoundAlert.Shutdown();
+            BitmapPool.Clear();
             _gcTimer?.Stop();
             _gcTimer?.Dispose();
             Bridge?.Dispose();

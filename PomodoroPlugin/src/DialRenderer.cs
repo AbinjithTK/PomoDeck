@@ -81,8 +81,8 @@ namespace Loupedeck.PomoDeckPlugin
                 _ => workColor
             };
 
-            using var bitmap = new SKBitmap(renderSize, renderSize);
-            using var canvas = new SKCanvas(bitmap);
+            var (bitmap, canvas) = BitmapPool.Get("Dial", renderSize, renderSize);
+            canvas.ResetMatrix();
             canvas.Scale((Single)renderSize / VSize, (Single)renderSize / VSize);
             canvas.Clear(bgColor);
 
@@ -103,9 +103,7 @@ namespace Loupedeck.PomoDeckPlugin
                          _ => accentColor
                      });
 
-            using var img = SKImage.FromBitmap(bitmap);
-            using var data = img.Encode(SKEncodedImageFormat.Jpeg, 85);
-            return BitmapImage.FromArray(data.ToArray());
+            return BitmapPool.Encode(bitmap);
         }
 
         // ── Shared draw logic — all paints are local, fully thread-safe ───

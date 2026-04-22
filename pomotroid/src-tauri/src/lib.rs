@@ -223,10 +223,12 @@ pub fn run() {
                 .get_webview_window("main")
                 .expect("main window not found");
 
-            // The config sets decorations:true so macOS renders the window correctly
-            // (decorations:false prevents event processing on macOS). On every other
-            // platform, restore the decorations-free window immediately; the window is
-            // still hidden at this point so there is no visible flash.
+            // Force window size — prevents tiny window on systems where
+            // decorations:false causes the window to collapse.
+            let _ = main_window.set_size(tauri::Size::Logical(tauri::LogicalSize::new(360.0, 478.0)));
+            let _ = main_window.set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(240.0, 240.0))));
+            let _ = main_window.center();
+
             #[cfg(not(target_os = "macos"))]
             let _ = main_window.set_decorations(false);
 

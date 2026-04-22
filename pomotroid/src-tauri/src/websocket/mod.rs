@@ -268,8 +268,15 @@ async fn handle_client_message(
         }
         "toggleWindow" => {
             if let Some(window) = app.get_webview_window("main") {
-                if window.is_visible().unwrap_or(false) { let _ = window.hide(); }
-                else { let _ = window.show(); let _ = window.unminimize(); let _ = window.set_focus(); }
+                let visible = window.is_visible().unwrap_or(false);
+                let minimized = window.is_minimized().unwrap_or(false);
+                if visible && !minimized {
+                    let _ = window.hide();
+                } else {
+                    let _ = window.show();
+                    let _ = window.unminimize();
+                    let _ = window.set_focus();
+                }
             }
         }
         "openTasks" => {

@@ -44,7 +44,7 @@ namespace Loupedeck.PomoDeckPlugin
             _snapX = _snapY = _snapR = Array.Empty<Single>();
             _snapColor = Array.Empty<UInt32>();
 
-            _physTimer = new Timer(33) { AutoReset = true };
+            _physTimer = new Timer(50) { AutoReset = true };
             _physTimer.Elapsed += (_, _) =>
             {
                 try
@@ -57,11 +57,22 @@ namespace Loupedeck.PomoDeckPlugin
                     {
                         _simulating = false;
                         _physTimer.Stop();
-                        _cachedBytes = null; // force one final render to cache
+                        _cachedBytes = null;
                         RenderGate.Request("PomoJar", () => { try { this.ActionImageChanged(); } catch { } });
-                        return; // don't render again
+                        return;
                     }
-                    RenderGate.Request("PomoJar", () => { try { this.ActionImageChanged(); } catch { } });
+                    // Smart frame skip: only send to USB when any ball is in the
+                    // bottom half (impact zone). Falling through air = no render.
+                    var anyInImpactZone = false;
+                    var frozen = _frozenCount;
+                    for (var i = frozen; i < _ballCount; i++)
+                    {
+                        if (_by[i] + _br[i] > JB * 0.5f) { anyInImpactZone = true; break; }
+                    }
+                    if (anyInImpactZone || _simFrame <= 2 || _simFrame >= MaxFrames - 2)
+                    {
+                        RenderGate.Request("PomoJar", () => { try { this.ActionImageChanged(); } catch { } });
+                    }
                 }
                 catch { _simulating = false; _physTimer.Stop(); }
             };
@@ -304,8 +315,8 @@ namespace Loupedeck.PomoDeckPlugin
                 var n = _snapCount;
                 var sx = _snapX; var sy = _snapY; var sr = _snapR; var sc = _snapColor;
 
-                using var bmp = new SKBitmap(size, size);
-                using var c = new SKCanvas(bmp);
+                var (bmp, c) = BitmapPool.Get("PomoJar", size, size);
+                c.ResetMatrix();
                 c.Scale(size / 80f);
                 c.Clear(tc.Bg);
 
@@ -323,13 +334,16 @@ namespace Loupedeck.PomoDeckPlugin
                     c.DrawCircle(sx[i], sy[i], sr[i], bp);
                 }
 
-                using var img = SKImage.FromBitmap(bmp);
-                using var data = img.Encode(SKEncodedImageFormat.Jpeg, 85);
-                var bytes = data.ToArray();
+                var result = BitmapPool.Encode(bmp);
 
                 // Cache the final settled frame as raw bytes
-                if (!_simulating) { _cachedBytes = bytes; }
-                return BitmapImage.FromArray(bytes);
+                if (!_simulating)
+                {
+                    using var cacheImg = SkiaSharp.SKImage.FromBitmap(bmp);
+                    using var cacheData = cacheImg.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 85);
+                    _cachedBytes = cacheData.ToArray();
+                }
+                return result;
             }
             catch
             {

@@ -111,6 +111,8 @@
         const active = themes.find((t) => t.name === resolveThemeName(s, osDark)) ?? themes[0];
         if (active) applyTheme(active);
         await getCurrentWebviewWindow().show();
+        await getCurrentWebviewWindow().unminimize();
+        await getCurrentWebviewWindow().setFocus();
         await info(`[main] initialized, theme=${active?.name ?? 'none'}`);
       } catch (e) {
         await logError(`[main] initialization failed: ${e}`);

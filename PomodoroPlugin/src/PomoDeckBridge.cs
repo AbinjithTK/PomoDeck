@@ -87,15 +87,25 @@ namespace Loupedeck.PomoDeckPlugin
                     ws.OnClose += (_, _) =>
                     {
                         _connected = false;
+                        _connectCooldown = true; // suppress events during disconnect cleanup
                         lock (_lock) { _state = null; _theme = null; _flow = null; }
                         closed.Set();
                         ConnectionChanged?.Invoke(false);
-                        ThemeUpdated?.Invoke(); // redraw all actions with default theme
+                        // Don't fire ThemeUpdated here — ConnectionChanged handler
+                        // already triggers OnSettingsChanged which redraws all widgets.
+                        // Firing ThemeUpdated causes a second wave of redraws that
+                        // races with the first, overwhelming the Plugin Service.
+                        System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                        {
+                            System.Threading.Thread.Sleep(500);
+                            _connectCooldown = false;
+                        });
                     };
 
                     ws.OnError += (_, _) =>
                     {
                         _connected = false;
+                        _connectCooldown = true;
                         lock (_lock) { _state = null; _theme = null; _flow = null; }
                         closed.Set();
                     };

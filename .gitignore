@@ -1,4 +1,4 @@
-# Rust
+# Rust build artifacts
 pomotroid/src-tauri/target/
 
 # Node
@@ -7,15 +7,31 @@ pomotroid/build/
 pomotroid/.svelte-kit/
 pomotroid/.paraglide/
 
-# .NET
+# .NET build artifacts
 PomodoroPlugin/src/obj/
 PomodoroPlugin/src/bin/
 PomodoroPlugin/bin/
+
+# Loupedeck simulator & skins (large, not source)
+PomodoroPlugin/simulator/
+PomodoroPlugin/skins/
 
 # Loupedeck decompiled references (not our code)
 LightroomDecompiled/
 PCMonitorDecompiled/
 PluginApiDecompiled/
+SensurfDecompiled/
+SpeedTestDecompiled/
+TestRefPlugin/
+
+# Duplicate build folder (renamed copy)
+pomodeck/
+
+# API check / analysis tools
+_apicheck/
+pluginapi_list.txt
+pluginapi_types.txt
+test_block.py
 
 # Restore backups
 pomotroid_restore/
@@ -31,6 +47,20 @@ gen_icon.py
 PomoDeck-UserFlow-Analysis.md
 PomoDeck-Demo-Voiceover.md
 
+# Submission docs already in DevStudio folder
+PomodoroPlugin/DESCRIPTION.md
+PomodoroPlugin/DEVPOST_SUBMISSION.md
+PomodoroPlugin/README.md
+PomodoroPlugin/README_FLOWDECK.md
+PomodoroPlugin/SUBMISSION.md
+PomodoroPlugin/SUBMISSION_PROJECT_DESCRIPTION.md
+PomodoroPlugin/SUBMISSION_VIDEO_VOICEOVER.md
+
+# Root-level binaries (copies — originals in DevStudio folder)
+PomoDeck.lplug4
+PomoDeck_submission.zip
+taskdone.mp3
+
 # OS
 .DS_Store
 Thumbs.db
@@ -39,8 +69,13 @@ Thumbs.db
 .vscode/
 .kiro/
 
-# Large binary source icon
+# Large images
 pomodeck-icon-1024.png
+pomodeck-square.png
 Pomodeck logo-01.png
 Pomodeck logo-02.png
 Screenshot*.png
+blockedsitemessege.png
+day statitics.png
+Tasks and main menu.png
+weekly streak.png

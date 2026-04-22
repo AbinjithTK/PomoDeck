@@ -179,6 +179,13 @@ If you find rough edges, that's the context. We chose to ship more features at h
 - Logi Options+ with MX Creative Console
 - The app works standalone. The plugin works standalone. Together they're the full experience.
 
+### Works with Actions Ring too
+
+PomoDeck isn't limited to the MX Creative Console. Every action is available as a standalone button that works with the Actions Ring on any supported Logitech device — MX Master 4, MX Anywhere 4, and others. We added dedicated actions like Timer Style specifically so Actions Ring users get the full PomoDeck experience without needing the console. Nobody should miss out.
+
+<!-- Drop actionsringdemo.png into images/ folder -->
+![Actions Ring](images/actions-ring.png)
+
 ---
 
 ## References

@@ -38,8 +38,8 @@ namespace Loupedeck.PomoDeckPlugin
             var running = pomo?.IsRunning() ?? false;
             var t = (Single)(DateTime.UtcNow - _startTime).TotalSeconds;
 
-            using var bmp = new SKBitmap(size, size);
-            using var c = new SKCanvas(bmp);
+            var (bmp, c) = BitmapPool.Get("Liquid", size, size);
+            c.ResetMatrix();
             c.Scale(size / V);
             c.Clear(tc.Bg);
 
@@ -140,9 +140,7 @@ namespace Loupedeck.PomoDeckPlugin
                 c.DrawCircle(112, 8, 4, rp);
             }
 
-            using var img = SKImage.FromBitmap(bmp);
-            using var data = img.Encode(SKEncodedImageFormat.Jpeg, 85);
-            return BitmapImage.FromArray(data.ToArray());
+            return BitmapPool.Encode(bmp);
         }
 
         private static Single Wv(Single x, Single s, Single a) =>

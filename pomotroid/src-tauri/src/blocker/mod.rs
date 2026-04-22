@@ -20,13 +20,13 @@ impl AppBlocker {
         inner.blocked_processes.clear();
         for app in apps {
             let mut name = app.trim().to_lowercase();
-            // Strip .exe suffix if present — we match on process name without extension
             if name.ends_with(".exe") { name = name[..name.len() - 4].to_string(); }
             if !name.is_empty() { inner.blocked_processes.insert(name); }
         }
+        log::info!("[blocker] blocked apps set: {:?}", inner.blocked_processes);
     }
-    pub fn start(&self) { self.inner.lock().unwrap().active = true; }
-    pub fn stop(&self) { self.inner.lock().unwrap().active = false; }
+    pub fn start(&self) { self.inner.lock().unwrap().active = true; log::info!("[blocker] activated"); }
+    pub fn stop(&self) { self.inner.lock().unwrap().active = false; log::info!("[blocker] deactivated"); }
     pub fn is_active(&self) -> bool { self.inner.lock().unwrap().active }
     pub fn check_and_block(&self) -> Option<String> {
         let (_active, blocked) = {
@@ -45,23 +45,47 @@ fn check_and_minimize(blocked: &HashSet<String>) -> Option<String> {
     unsafe {
         let hwnd = windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow();
         if hwnd == std::ptr::null_mut() { return None; }
+
+        // Method 1: Get process name from PID
         let mut pid: u32 = 0;
         windows_sys::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(hwnd, &mut pid);
-        if pid == 0 { return None; }
-        let handle = windows_sys::Win32::System::Threading::OpenProcess(0x1000, 0, pid);
-        if handle == std::ptr::null_mut() { return None; }
-        let mut buf = [0u16; 512];
-        let mut size = buf.len() as u32;
-        let ok = windows_sys::Win32::System::Threading::QueryFullProcessImageNameW(handle, 0, buf.as_mut_ptr(), &mut size);
-        windows_sys::Win32::Foundation::CloseHandle(handle);
-        if ok == 0 { return None; }
-        let path = OsString::from_wide(&buf[..size as usize]);
-        let path_str = path.to_string_lossy().to_lowercase();
-        let exe_name = path_str.rsplit('\\').next().unwrap_or("").trim_end_matches(".exe");
+        let mut exe_name = String::new();
+
+        if pid != 0 {
+            // Try PROCESS_QUERY_LIMITED_INFORMATION first, fall back to PROCESS_QUERY_INFORMATION
+            let handle = windows_sys::Win32::System::Threading::OpenProcess(0x1000, 0, pid);
+            let handle = if handle == std::ptr::null_mut() {
+                windows_sys::Win32::System::Threading::OpenProcess(0x0400, 0, pid)
+            } else { handle };
+
+            if handle != std::ptr::null_mut() {
+                let mut buf = [0u16; 512];
+                let mut size = buf.len() as u32;
+                let ok = windows_sys::Win32::System::Threading::QueryFullProcessImageNameW(handle, 0, buf.as_mut_ptr(), &mut size);
+                windows_sys::Win32::Foundation::CloseHandle(handle);
+                if ok != 0 {
+                    let path = OsString::from_wide(&buf[..size as usize]);
+                    let path_str = path.to_string_lossy().to_lowercase();
+                    exe_name = path_str.rsplit('\\').next().unwrap_or("").trim_end_matches(".exe").to_string();
+                }
+            }
+        }
+
+        // Method 2: Fall back to window title matching if process name failed
+        if exe_name.is_empty() {
+            let mut title_buf = [0u16; 256];
+            let len = windows_sys::Win32::UI::WindowsAndMessaging::GetWindowTextW(hwnd, title_buf.as_mut_ptr(), 256);
+            if len > 0 {
+                let title = OsString::from_wide(&title_buf[..len as usize]);
+                exe_name = title.to_string_lossy().to_lowercase();
+            }
+        }
+
         if exe_name.is_empty() { return None; }
+
         let is_blocked = blocked.iter().any(|b| exe_name == b.as_str() || exe_name.contains(b.as_str()));
         if is_blocked {
-            windows_sys::Win32::UI::WindowsAndMessaging::ShowWindow(hwnd, 6);
+            windows_sys::Win32::UI::WindowsAndMessaging::ShowWindow(hwnd, 6); // SW_MINIMIZE
             log::info!("[blocker] minimized: {exe_name}");
             return Some(exe_name.to_string());
         }

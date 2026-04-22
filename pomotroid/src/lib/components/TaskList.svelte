@@ -82,7 +82,11 @@
   <div class="add-row">
     <input bind:this={inputEl} bind:value={newTitle} onkeydown={handleKey}
       placeholder="+ Add Task" class="add-input" />
-    <span class="add-estimate">{#each Array(Math.min(newEstimate, 5)) as _}🍅{/each} {newEstimate}</span>
+    <div class="pomo-picker">
+      <button class="pomo-btn" onclick={() => newEstimate = Math.max(1, newEstimate - 1)} aria-label="Less">◀</button>
+      <span class="pomo-display">{#each Array(Math.min(newEstimate, 5)) as _}🍅{/each} {newEstimate}</span>
+      <button class="pomo-btn" onclick={() => newEstimate = Math.min(8, newEstimate + 1)} aria-label="More">▶</button>
+    </div>
   </div>
 
   {#if tasks.length > 0}
@@ -163,8 +167,18 @@
   .add-input::placeholder {
     color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
   }
-  .add-estimate {
-    flex-shrink: 0; font-size: 12px; line-height: 1; white-space: nowrap;
+  .pomo-picker {
+    display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+  }
+  .pomo-btn {
+    background: none; border: none;
+    color: var(--color-foreground-darker); font-size: 12px;
+    cursor: pointer; padding: 2px 4px;
+    transition: color 0.1s; opacity: 0.5;
+  }
+  .pomo-btn:hover { color: var(--color-accent); opacity: 1; }
+  .pomo-display {
+    font-size: 12px; line-height: 1; white-space: nowrap; min-width: 24px; text-align: center;
   }
 
   .footer {

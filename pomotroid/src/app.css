@@ -66,20 +66,11 @@ body {
   width: 100%;
   overflow: hidden;
   font-family: 'Mona Sans', system-ui, sans-serif;
+  background-color: var(--color-background);
   color: var(--color-foreground);
   user-select: none;
   scrollbar-width: none;
   -ms-overflow-style: none;
-}
-
-html {
-  background: transparent;
-}
-
-body {
-  background-color: var(--color-background);
-  border-radius: 10px;
-  overflow: hidden;
 }
 
 /* Hide all scrollbars globally */

@@ -74,8 +74,15 @@
       }
       ctx.clearRect(0, 0, JAR_W, JAR_H);
       for (const b of jarBalls) {
+        // Base color fill
         ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
         ctx.fillStyle = b.color; ctx.fill();
+        // 3D highlight — radial gradient from top-left
+        const grad = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.1, b.x, b.y, b.r);
+        grad.addColorStop(0, 'rgba(255,255,255,0.35)');
+        grad.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+        ctx.fillStyle = grad; ctx.fill();
       }
       if (active && frames < 300) jarAnimId = requestAnimationFrame(tick);
     }

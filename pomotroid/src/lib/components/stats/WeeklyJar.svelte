@@ -80,7 +80,15 @@
         if (!b.frozen) active = true;
       }
       ctx.clearRect(0, 0, w, JAR_H);
-      for (const b of balls) { ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fillStyle = b.color; ctx.fill(); }
+      for (const b of balls) {
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fillStyle = b.color; ctx.fill();
+        const g = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.1, b.x, b.y, b.r);
+        g.addColorStop(0, 'rgba(255,255,255,0.3)');
+        g.addColorStop(0.5, 'rgba(255,255,255,0.03)');
+        g.addColorStop(1, 'rgba(0,0,0,0.12)');
+        ctx.fillStyle = g; ctx.fill();
+      }
     }
     if (active && frames < 250) animId = requestAnimationFrame(tick);
   }
